@@ -38,9 +38,39 @@ def traffic_percentage(x):
 	else:
 		return 100
 
+def lineNotify(message,type):
+    payload = {'message':message}
+    return _lineNotify(payload,type)
+
+def notifyFile(filename):
+    file = {'imageFile':open(filename,'rb')}
+    payload = {'message': 'test'}
+    return _lineNotify(payload,file)
+
+def notifyPicture(url,type):
+    payload = {'message':" ",'imageThumbnail':url,'imageFullsize':url}
+    return _lineNotify(payload,type)
+
+def notifySticker(stickerID,stickerPackageID,type):
+    payload = {'message': " ",'stickerPackageId':stickerPackageID,'stickerId':stickerID}
+    return _lineNotify(payload,type)
+
+def _lineNotify(payload,type,file=None):
+    import requests
+    url = 'https://notify-api.line.me/api/notify'
+    if type == "admin":
+    	token = 'rUVBdKwkDNTvfN5QL5mMCZktU5llOyjk5KLDil5oJ5D'	#EDIT
+    elif type == "user":
+    	token = 'u5dhlrfoKQYbwDTVXQlo4jA5Wq1x4UShD9GrWpgRQVV'
+    else:
+    	return "Not Available"
+    headers = {'Authorization':'Bearer '+token}
+    return requests.post(url, headers=headers , data = payload, files=file)
+
 class smart_soi_status(Resource):
         def get(self, location):
-                url = "http://35.208.101.91:8080/sensors/project_id/smart_soi/" + location
+		notifySticker(34,2,"user")
+                url = "http://35.208.101.91:8080/sensors/project_id/smart_soi/cie/" + location
                 response = requests.get(url)
                 smart_soi_status = response.json()
                 data = []
@@ -49,10 +79,21 @@ class smart_soi_status(Resource):
                         print(data)
 			#coming_data = {'Alley':'soi1','alley_status':'Heavy_traffic','Location':[20,30]}
                         #data.append(coming_data)
+			url1 = "http://35.231.245.160:5000/notify/user/"+smart_soi_status[i]["sensor_data"]
+			response2 = requests.get(url1)
+                	print(response2)
                         print(smart_soi_status[i]["sensor_data"])
                 return jsonify(coming_data)
 
-api.add_resource(smart_soi_status, '/smart_soi/<location>')
-
+class line_notify_api(Resource):
+	def get(self, msg,type,sticker):
+		if msg != "none":
+			lineNotify(msg,type)
+		if sticker != "none":
+			tt = sticker.split(",")
+			notifySticker(tt[0],tt[1],type)
+		return "sent to: "+type+":"+msg
+api.add_resource(smart_soi_status, '/smart_soi/cie/<location>')
+api.add_resource(line_notify_api,'/notify/<string:type>/<string:msg>/<string:sticker>')
 if __name__ == '__main__':
      app.run(host = '0.0.0.0', port='5000', threaded=True, debug=True)
