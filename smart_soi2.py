@@ -1,4 +1,5 @@
 
+import mysql.connector
 from flask import Flask, request , jsonify
 from flask_cors import CORS
 from flask_restful import Resource, Api
@@ -9,8 +10,53 @@ app = Flask(__name__)
 CORS(app)
 api = Api(app)
 
+db = mysql.connector.connect(
+        host="104.154.70.132",
+        user="root",
+        password="12345",
+        database="smart_soi"
+);
+
 import requests
 import time
+
+@app.route('/smart_soi/create/database',methods=['GET','POST'])
+def createdb():
+    dbcursor = db.cursor()
+    dbcursor.execute("CREATE TABLE smartsoi (user VARCHAR(255),magellan VARCHAR(255),data VARCHAR(255))")
+    dbcursor.execute("SHOW TABLES")
+    for x in dbcursor:
+      print(x)
+    return "Created"
+
+@app.route('/smart_soi/list',methods=['GET','POST'])
+def listUser():
+    users = []
+    dbcursor = db.cursor()
+    dbcursor.execute("SELECT * FROM smartsoi")
+    myresult = dbcursor.fetchall()
+    for x in myresult:
+      users.append(x[0])
+    return json.dumps(users)
+
+@app.route('/smart_soi/<string:user>/add/<string:magellan>/<string:data>',methods=['GET','POST'])
+def addUser(user,magellan,data):
+    sql = "INSERT INTO smartsoi (`user`,`magellan`,`data`)VALUES(%s,%s,%s)"
+    dbcursor = db.cursor()
+    value = (user,magellan,data)
+    dbcursor.execute(sql,value)
+    db.commit()
+    return str(dbcursor.rowcount)+" record inserted."
+
+@app.route('/smart_soi/<string:user>/delete')
+def deleteUser(user):
+    dbcursor = db.cursor()
+    sql = "DELETE FROM smartsoi WHERE user = %s"
+    adr = (user,)
+    dbcursor.execute(sql,adr)
+    db.commit()
+    print(dbcursor.rowcount,"record(s) deleted")
+    return str(dbcursor.rowcount)+" record(s) deleted"
 
 def smart_soi_sensor_condition(x):
         if x < 250:
@@ -44,18 +90,18 @@ def traffic(data):
 	aa = 10
 	#x = data["Distance"]
 	x = data.split("-")
-	lineNotify(x[0],"admin")
+        requests.get("http://34.74.188.193:5050/notify/admin/"+str(x[0])+"/none")
 	if int(x[0]) > aa:
-		lineNotify("No","admin")
+		requests.get("http://34.74.188.193:5050/notify/admin/No/none")
 		return "No_traffic"
 	elif int(x[0]) < aa and int(x[1]) >aa and int(x[2])>aa:
-		lineNotify("Light","admin")
+		requests.get("http://34.74.188.193:5050/notify/admin/Light/none")
 		return "Light_traffic"
 	elif int(x[0]) < aa and int(x[1]) < aa and int(x[2])>aa:
-		lineNotify("Medium","admin")
+		requests.get("http://34.74.188.193:5050/notify/admin/Medium/none")
 		return "Medium_traffic"
 	elif int(x[0])<aa and int(x[1])<aa and int(x[2])<aa:
-		lineNotify("High","admin")
+		requests.get("http://34.74.188.193:5050/notify/admin/High/none")
 		return "High_traffic"
 def sugess(status1,status2):
 	if status1 == "High_traffic" and status2 == "High_traffic":
@@ -64,11 +110,17 @@ def sugess(status1,status2):
 		return "Change to the right lane"
 	else:
 		return "Stay in the lane"
-@app.route('/smart_soi/cie/<location>',methods=['GET','POST'])
+@app.route('/smart_soi/<string:user>/cie/<string:location>',methods=['GET','POST'])
 def get_soi(location):
-        url = "http://35.208.101.91:8080/sensors/project_id/smart_soi/cie/" + location
+        dbcursor = db.cursor()
+	sql = "SELECT * FROM lineuser WHERE user = %s"
+	adr = (user,)
+	dbcursor.execute(sql,adr)
+	myresult = dbcursor.fetchall()
+	for x in myresult:
+		url = x[2]+location
+		url1 = x[1]
         response = requests.get(url)
-	url1 = "https://www.aismagellan.io/api/things/pull/f91baf10-659e-11e9-96dd-9fb5d8a71344"
 	response1 = requests.get(url1)
 	rawdata = response1.json()
 	print(rawdata)
@@ -84,7 +136,7 @@ def get_soi(location):
                 print(data)
 		#coming_data = {'Alley':'soi1','alley_status':'Heavy_traffic','Location':[20,30]}
                 #data.append(coming_data)
-		url1 = "http://35.231.245.160:5000/notify/admin/"+statusy+sugessx+"/none"
+		url1 = "http://34.74.188.193:5050/notify/admin/"+statusy+sugessx+"/none"
 		response2 = requests.get(url1)
                 print(response2)
                 print(smart_soi_status[i]["sensor_data"])
