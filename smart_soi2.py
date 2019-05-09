@@ -39,7 +39,7 @@ def listUser():
       users.append(x[0])
     return json.dumps(users)
 
-@app.route('/smart_soi/<string:user>/add/<string:magellan>/<string:data>',methods=['GET','POST'])
+@app.route('/smart_soi/<string:user>/add/magellan/<path:magellan>/data/<path:data>',methods=['GET','POST'])
 def addUser(user,magellan,data):
     sql = "INSERT INTO smartsoi (`user`,`magellan`,`data`)VALUES(%s,%s,%s)"
     dbcursor = db.cursor()
@@ -111,9 +111,9 @@ def sugess(status1,status2):
 	else:
 		return "Stay in the lane"
 @app.route('/smart_soi/<string:user>/cie/<string:location>',methods=['GET','POST'])
-def get_soi(location):
+def get_soi(user,location):
         dbcursor = db.cursor()
-	sql = "SELECT * FROM lineuser WHERE user = %s"
+	sql = "SELECT * FROM smartsoi WHERE user = %s"
 	adr = (user,)
 	dbcursor.execute(sql,adr)
 	myresult = dbcursor.fetchall()
