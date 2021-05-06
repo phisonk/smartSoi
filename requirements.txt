@@ -3,7 +3,7 @@ click==6.7
 gunicorn==19.7.1
 Flask==1.0.2
 Flask-API==1.1
-Flask-Cors==3.0.7
+Flask-Cors==3.0.9
 Flask-RESTful==0.3.7
 google-compute-engine==2.8.13
 ipaddress==1.0.22
